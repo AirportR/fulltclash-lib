@@ -1,3 +1,39 @@
+use pyo3::{prelude::*, wrap_pyfunction, Python};
+
+/// Formats the sum of two numbers as string.
+#[pyfunction]
+fn sum_as_string(a: usize, b: usize) -> PyResult<String> {
+    Ok((a + b).to_string())
+}
+
+#[pyfunction]
+fn rust_sleep(py: Python<'_>) -> PyResult<&PyAny> {
+    pyo3_asyncio::tokio::future_into_py(py, async  {
+        tokio::time::sleep(Duration::from_secs(1)).await;
+        Ok(Python::with_gil(|py| py.None()))
+    })
+}
+
+
+/// 输入地址、端口、测速地址、线程，即可开始测速，返回测速获取的字节量的一个列表。
+#[pyfunction]
+#[pyo3(signature = (proxy_host, proxy_port, urls, worker), text_signature = "(proxy_host, b=proxy_port, urls, worker)")]
+fn speed_test(py: Python<'_>, proxy_host: String, proxy_port: u32, urls: Vec<String>, worker: i32) -> PyResult<&PyAny> {
+    pyo3_asyncio::tokio::future_into_py(py, async move {
+        let res = speed(proxy_host.clone(), proxy_port.clone(), urls.clone(), worker).await;
+        Ok(Python::with_gil(|py| res.into_py(py)))
+    })
+}
+
+/// A Python module implemented in Rust.
+#[pymodule]
+fn ftclib(_py: Python, m: &PyModule) -> PyResult<()> {
+    m.add_function(wrap_pyfunction!(sum_as_string, m)?)?;
+    m.add_function(wrap_pyfunction!(rust_sleep, m)?)?;
+    m.add_function(wrap_pyfunction!(speed_test, m)?)?;
+    Ok(())
+}
+
 use std::io;
 use std::io::Write;
 use futures_util::stream::StreamExt;
@@ -170,8 +206,13 @@ pub async fn speed(proxy_host: String, proxy_port: u32, urls: Vec<String>, worke
     for t in tasks {
         let res = t.await.unwrap();
         total._total_red += res._total_red;
-        total._count = res._count;
-        total._time_used = res._time_used;
+        if res._count > total._count{
+            total._count = res._count;
+        }
+        if res._time_used > total._time_used{
+            total._time_used = res._time_used;
+        }
+
         res_vec.push(res.result);
 
     }
@@ -196,7 +237,7 @@ pub async fn speed(proxy_host: String, proxy_port: u32, urls: Vec<String>, worke
         .map(|i| new_vec_vec.iter().map(|v| v[i]).sum())
         .collect();
 
-    println!("{:?}", new_vec);
+    // println!("{:?}", new_vec);
     new_vec
 }
 
