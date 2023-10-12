@@ -3,7 +3,7 @@ name: release-myspeed
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    branches: [master]
 
 jobs:
   release-myspeed:
