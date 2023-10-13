@@ -7,9 +7,7 @@ on:
 
 jobs:
   release-myspeed:
-    permissions:
-      contents: write
-
-    uses: ./.github/workflows/bin-release.yml
-    with:
-      PACKAGE_NAME: "myspeed"
+    - uses: PyO3/maturin-action@v1
+      with:
+        command: build
+        args: --release
